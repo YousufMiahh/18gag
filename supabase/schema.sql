@@ -490,6 +490,12 @@ create policy "post board messages" on public.board_messages for insert to authe
 create policy "delete board messages" on public.board_messages for delete to authenticated
   using (author_id = auth.uid() or public.is_admin());
 
+-- ---------- base permissions (stated outright, in case the project does not grant them by default) ----------
+grant usage on schema public to anon, authenticated;
+grant select on all tables in schema public to anon, authenticated;
+grant insert, update, delete on all tables in schema public to authenticated;
+grant execute on all functions in schema public to anon, authenticated;
+
 -- ---------- column permissions (stop people editing counters, badges, etc.) ----------
 revoke insert, update, delete on public.sections, public.boards from anon, authenticated;
 

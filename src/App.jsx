@@ -28,11 +28,14 @@ function useKeys() {
       if (e.key !== 'j' && e.key !== 'k') return
       const posts = [...document.querySelectorAll('[data-post]')]
       if (!posts.length) return
-      const y = 80
-      const idx = posts.findIndex((p) => p.getBoundingClientRect().top > y + 4)
-      const cur = idx === -1 ? posts.length - 1 : Math.max(0, idx - 1)
-      const next = e.key === 'j' ? (idx === -1 ? cur : idx) : Math.max(0, posts[cur].getBoundingClientRect().top < y - 4 ? cur : cur - 1)
-      window.scrollTo({ top: window.scrollY + posts[next].getBoundingClientRect().top - y, behavior: 'smooth' })
+      const y = 76
+      const tops = posts.map((p) => p.getBoundingClientRect().top)
+      let cur = -1
+      tops.forEach((t, i) => { if (t <= y + 4) cur = i })
+      let next
+      if (e.key === 'j') next = Math.min(posts.length - 1, cur + 1)
+      else next = cur >= 0 && tops[cur] < y - 4 ? cur : Math.max(0, cur - 1)
+      window.scrollTo({ top: window.scrollY + tops[next] - y, behavior: 'smooth' })
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
@@ -44,7 +47,7 @@ function Shell() {
   const closeMenu = useCallback(() => setMenu(false), [])
   const loc = useLocation()
   useKeys()
-  useEffect(() => { if (!loc.hash) window.scrollTo(0, 0) }, [loc.pathname, loc.search, loc.hash])
+  useEffect(() => { if (!loc.hash) window.scrollTo({ top: 0, behavior: 'instant' }) }, [loc.pathname, loc.search, loc.hash])
 
   return (
     <>

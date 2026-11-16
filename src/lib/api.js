@@ -10,6 +10,7 @@ export const AWARDS = [
 ]
 
 const clean = (s) => s.replace(/[%,(){}*"\\]/g, ' ').trim()
+export const likeExact = (s) => s.replace(/[\\%_]/g, '\\$&')
 
 /* ---------- feed ---------- */
 async function decorate(posts, uid) {
@@ -162,7 +163,7 @@ export const deleteComment = (id) => supabase.from('comments').delete().eq('id',
 
 /* ---------- profiles and social ---------- */
 export async function fetchProfile(username) {
-  const { data } = await supabase.from('profiles').select('*').ilike('username', username).maybeSingle()
+  const { data } = await supabase.from('profiles').select('*').ilike('username', likeExact(username)).maybeSingle()
   if (!data) return null
   const count = (qy) => qy.then((r) => r.count || 0)
   const [followers, following, posts] = await Promise.all([

@@ -133,7 +133,7 @@ export function PostCard({ post, full, onGone }) {
   const doModRemove = async () => {
     const { error } = await api.modRemovePost(post.id, true)
     if (error) return toast(error.message)
-    toast('Post removed'); onGone?.(post.id)
+    toast('Post removed'); onGone?.(post.id); if (full) nav('/')
   }
 
   return (

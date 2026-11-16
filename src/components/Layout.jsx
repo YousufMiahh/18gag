@@ -14,6 +14,7 @@ export function Header({ onMenu }) {
   const loc = useLocation()
 
   useEffect(() => setMenu(false), [loc])
+  useEffect(() => setQ(loc.pathname === '/search' ? sp.get('q') || '' : ''), [loc.pathname, sp])
   useEffect(() => {
     if (!menu) return
     const off = (e) => !ref.current?.contains(e.target) && setMenu(false)
@@ -37,9 +38,9 @@ export function Header({ onMenu }) {
         <Link className="logo" to="/" aria-label="18gag home"><b>18</b>gag</Link>
         <form className="search" onSubmit={search} role="search">
           <Icon name="search" size={16} />
-          <input id="site-search" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search posts and tags" aria-label="Search posts and tags" />
+          <input id="site-search" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" aria-label="Search posts and tags" />
         </form>
-        <button className="icon-btn ghost" onClick={nextTheme} aria-label="Switch light or dark theme"><Icon name="sun" /></button>
+        <button className="icon-btn ghost theme-btn" onClick={nextTheme} aria-label="Switch light or dark theme"><Icon name="sun" /></button>
         {user && (
           <Link className="icon-btn ghost bell" to="/notifications" aria-label={`Notifications, ${unread} unread`}>
             <Icon name="bell" />{unread > 0 && <span className="badge">{unread > 99 ? '99+' : unread}</span>}
@@ -70,7 +71,7 @@ export function Header({ onMenu }) {
 }
 
 export function Sidebar({ openMobile, onClose }) {
-  const { sections, lists, uid, need, reloadLists, toast } = useApp()
+  const { sections, lists, uid, need, reloadLists, toast, theme, setTheme } = useApp()
   const loc = useLocation()
   useEffect(() => onClose(), [loc]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -99,6 +100,9 @@ export function Sidebar({ openMobile, onClose }) {
             </button>
           </div>
         ))}
+        <button className="side-link side-theme" onClick={() => setTheme(theme === 'dark' || (theme === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches) ? 'light' : 'dark')}>
+          <Icon name="sun" /><span>Switch light / dark</span>
+        </button>
         <p className="side-foot">18gag · a personal project<br />Press J and K to move between posts.</p>
       </nav>
     </>

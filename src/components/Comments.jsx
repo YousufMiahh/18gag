@@ -124,7 +124,12 @@ export function Comments({ post }) {
       (by[parent] || []).slice().sort(parent === 0 ? order : (a, b) => new Date(a.created_at) - new Date(b.created_at)).map((c) => (
         <Comment key={c.id} c={c} depth={depth} postAuthor={post.author_id} kids={build(c.id, depth + 1)}
           onAdd={(row) => setRows((r) => [...r, { ...row, myVote: 0 }])}
-          onDelete={(id) => setRows((r) => r.filter((x) => x.id !== id && x.parent_id !== id))} />
+          onDelete={(id) => setRows((r) => {
+            const dead = new Set([id])
+            let grew = true
+            while (grew) { grew = false; r.forEach((x) => { if (dead.has(x.parent_id) && !dead.has(x.id)) { dead.add(x.id); grew = true } }) }
+            return r.filter((x) => !dead.has(x.id))
+          })} />
       ))
     return build(0, 0)
   }, [rows, sort, post.author_id])

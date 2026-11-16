@@ -25,7 +25,7 @@ function AuthModal() {
         toast('Welcome back'); close()
       } else if (mode === 'signup') {
         if (!/^[a-zA-Z0-9_]{3,20}$/.test(f.username)) throw new Error('Usernames are 3 to 20 letters, numbers or underscores.')
-        const { data: taken } = await supabase.from('profiles').select('id').ilike('username', f.username).maybeSingle()
+        const { data: taken } = await supabase.from('profiles').select('id').ilike('username', api.likeExact(f.username)).maybeSingle()
         if (taken) throw new Error('That username is taken. Try another.')
         const { data, error } = await supabase.auth.signUp({
           email: f.email, password: f.password,
@@ -129,8 +129,10 @@ function drawMeme(canvas, img, top, bottom, size) {
 
 const dims = (file) => new Promise((res) => {
   const url = URL.createObjectURL(file)
+  setTimeout(() => res({}), 4000)
   if (file.type.startsWith('video/')) {
     const v = document.createElement('video')
+    v.preload = 'metadata'; v.muted = true
     v.onloadedmetadata = () => { res({ w: v.videoWidth, h: v.videoHeight }); URL.revokeObjectURL(url) }
     v.onerror = () => res({})
     v.src = url
@@ -226,7 +228,7 @@ function UploadModal() {
       <form className="form" onSubmit={submit}>
         <div className="seg wide" role="group" aria-label="Post type">
           {tabs.map(([k, label]) => (
-            <button type="button" key={k} aria-pressed={kind === k} onClick={() => { setKind(k); setErr('') }}>{label}</button>
+            <button type="button" key={k} aria-pressed={kind === k} onClick={() => { setKind(k); setErr(''); setFile(null); setPreview(null); memeImg.current = null }}>{label}</button>
           ))}
         </div>
         <label htmlFor="up-title">Title
@@ -236,7 +238,7 @@ function UploadModal() {
         {(kind === 'media' || kind === 'meme') && (
           <>
             <label htmlFor="up-file" className="drop">
-              <input id="up-file" type="file" accept={kind === 'meme' ? 'image/*' : 'image/*,video/*'} onChange={pick} />
+              <input key={kind} id="up-file" type="file" accept={kind === 'meme' ? 'image/*' : 'image/*,video/*'} onChange={pick} />
               <span>{file ? file.name : kind === 'meme' ? 'Choose a picture to caption' : 'Choose an image, GIF or video'}</span>
             </label>
             {preview && kind === 'media' && (file.type.startsWith('video/')

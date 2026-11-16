@@ -32,7 +32,17 @@ Open http://localhost:5173.
 3. Under **Site configuration → Environment variables** add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`, then redeploy.
 4. Put the Netlify address into Supabase's **Site URL** (step 1.4).
 
-### 4. Make yourself an admin
+### 4. Add starter posts (optional)
+
+Run `supabase/seed.sql` in the SQL editor. It creates five bot accounts (their names end in `_bot` and their bios say they are automated) and 26 starter posts: memes, two text posts and two polls. The pictures are in `public/seed/` and are served by the site itself. The bots have no password and cannot log in.
+
+To remove them and everything they posted:
+
+```sql
+delete from auth.users where email like '%@bots.18gag.invalid';
+```
+
+### 5. Make yourself an admin
 
 Sign up on the site, then run this in the Supabase SQL editor with your username:
 
@@ -59,6 +69,12 @@ A **Moderation** link then appears in your account menu.
 | Boards | Live chat rooms by topic |
 | Safety | Sensitive-content blur, report posts and comments, admin review queue, remove content |
 | Extras | Pro badge (set by an admin), light and dark themes, phone and desktop layouts |
+
+## If something goes wrong
+
+- **"permission denied" errors in the browser console**: run `supabase/permissions.sql` in the SQL editor.
+- **A "Connect your Supabase project" screen**: the two environment variables are missing or misspelled. Fix them in Netlify and redeploy.
+- **Sign-up says to check email but nothing arrives**: Supabase's built-in email sender is rate-limited. Turn off "Confirm email" or connect your own email provider.
 
 ## Changing things
 
