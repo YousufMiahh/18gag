@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useApp } from '../lib/ctx'
 import * as api from '../lib/api'
-import { Avatar, Empty, Icon, Spinner, UserLink, ago, fmt } from './ui'
+import { Avatar, Empty, Icon, Spinner, UserLink, ago, fmt, withMentions } from './ui'
 
 function CommentForm({ postId, parentId, onDone, autoFocus }) {
   const { uid, need, toast, profile } = useApp()
@@ -58,7 +58,18 @@ function Comment({ c, kids, depth, postAuthor, onAdd, onDelete }) {
   const [score, setScore] = useState(c.score)
   const [replying, setReplying] = useState(false)
   const [folded, setFolded] = useState(false)
+  const [body, setBody] = useState(c.body)
+  const [edited, setEdited] = useState(!!c.edited_at)
+  const [draft, setDraft] = useState(null)
   if (lists.blocked.has(c.author_id)) return null
+
+  const saveEdit = async () => {
+    const next = draft.trim()
+    if (!next && !c.media_url) return toast('A comment cannot be empty.')
+    const { error } = await api.updateComment(c.id, next)
+    if (error) return toast('Edit did not save. Try again.')
+    setBody(next); setEdited(true); setDraft(null)
+  }
 
   const doVote = (v) => need(async () => {
     const next = vote === v ? 0 : v
@@ -79,13 +90,19 @@ function Comment({ c, kids, depth, postAuthor, onAdd, onDelete }) {
       </button>
       <div className="comment-main">
         <div className="comment-meta">
-          <UserLink username={c.username} pro={c.is_pro} />
+          <UserLink username={c.username} pro={c.is_pro} verified={c.is_verified} since={c.author_since} />
           {c.author_id === postAuthor && <span className="op">OP</span>}
           <time>{ago(c.created_at)}</time>
+          {edited && <span>(edited)</span>}
         </div>
         {!folded && (
           <>
-            {c.body && <p>{c.body}</p>}
+            {draft !== null ? (
+              <div className="cform-box">
+                <textarea id={`edit-${c.id}`} rows={2} maxLength={2000} value={draft} autoFocus aria-label="Edit comment" onChange={(e) => setDraft(e.target.value)} />
+                <div className="cform-row"><span className="spacer" /><button className="mini text" onClick={() => setDraft(null)}>Cancel</button><button className="btn small" onClick={saveEdit}>Save</button></div>
+              </div>
+            ) : body && <p>{withMentions(body)}</p>}
             {c.media_url && <img className="comment-img" src={c.media_url} alt="" loading="lazy" />}
             <div className="comment-actions">
               <button className={'mini' + (vote === 1 ? ' up' : '')} onClick={() => doVote(1)} aria-pressed={vote === 1} aria-label="Upvote comment"><Icon name="up" size={15} /></button>
@@ -93,6 +110,7 @@ function Comment({ c, kids, depth, postAuthor, onAdd, onDelete }) {
               <button className={'mini' + (vote === -1 ? ' down' : '')} onClick={() => doVote(-1)} aria-pressed={vote === -1} aria-label="Downvote comment"><Icon name="down" size={15} /></button>
               <button className="mini text" onClick={() => need(() => setReplying((r) => !r))}>Reply</button>
               {c.author_id !== uid && <button className="mini text" onClick={() => need(() => open('report', { comment_id: c.id }))}>Report</button>}
+              {c.author_id === uid && <button className="mini text" onClick={() => setDraft(body)}>Edit</button>}
               {(c.author_id === uid || profile?.is_admin) && <button className="mini text" onClick={del}>Delete</button>}
             </div>
             {replying && <CommentForm postId={c.post_id} parentId={c.id} autoFocus onDone={(row) => { setReplying(false); onAdd(row) }} />}

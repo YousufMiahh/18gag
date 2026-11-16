@@ -4,7 +4,7 @@ import { configured } from './lib/supabase'
 import { AppProvider } from './lib/ctx'
 import { Header, Sidebar } from './components/Layout'
 import { Modals, Toasts } from './components/modals'
-import { AdminPage, BoardPage, BoardsPage, FeedPage, NotFound, NotificationsPage, PostPage, ProfilePage, SettingsPage } from './pages/pages'
+import { AdminPage, BoardPage, BoardsPage, FeedPage, NotFound, NotificationsPage, PostPage, PrivacyPage, ProfilePage, RulesPage, SettingsPage } from './pages/pages'
 
 function Setup() {
   return (
@@ -72,6 +72,8 @@ function Shell() {
             <Route path="/boards" element={<BoardsPage />} />
             <Route path="/boards/:slug" element={<BoardPage />} />
             <Route path="/admin" element={<AdminPage />} />
+            <Route path="/rules" element={<RulesPage />} />
+            <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </main>

@@ -35,3 +35,12 @@ grant insert (board, body) on public.board_messages to authenticated;
 
 revoke insert, update on public.awards from anon, authenticated;
 grant insert (post_id, kind) on public.awards to authenticated;
+
+-- update 1
+grant select, insert, delete on public.muted_tags, public.muted_sections to authenticated;
+grant update (private_upvotes) on public.profiles to authenticated;
+grant insert (is_anonymous) on public.posts to authenticated;
+grant select on public.feed, public.comments_view, public.board_messages_view to anon, authenticated;
+revoke select on public.posts from anon, authenticated;
+grant select (id, title, kind, media_url, media_w, media_h, body, section, tags, nsfw, up_count, down_count,
+              comment_count, award_count, removed, created_at, is_anonymous) on public.posts to anon, authenticated;

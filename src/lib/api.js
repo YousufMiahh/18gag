@@ -92,8 +92,8 @@ export const hidePost = (post_id, user_id) =>
 export const deletePost = (id) => supabase.from('posts').delete().eq('id', id)
 export const report = (row) => supabase.from('reports').insert(row)
 
-export async function uploadMedia(uid, blob, ext) {
-  const path = `${uid}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+export async function uploadMedia(uid, blob, ext, folder) {
+  const path = `${folder || uid}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
   const { error } = await supabase.storage
     .from('media')
     .upload(path, blob, { contentType: blob.type || undefined, cacheControl: '31536000' })
@@ -169,7 +169,7 @@ export async function fetchProfile(username) {
   const [followers, following, posts] = await Promise.all([
     count(supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', data.id)),
     count(supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', data.id)),
-    count(supabase.from('posts').select('*', { count: 'exact', head: true }).eq('author_id', data.id).eq('removed', false)),
+    count(supabase.from('feed').select('id', { count: 'exact', head: true }).eq('author_id', data.id).eq('removed', false)),
   ])
   return { ...data, followers, following, posts }
 }
@@ -214,3 +214,44 @@ export const resolveReport = (id) => supabase.from('reports').update({ status: '
 export const modRemovePost = (pid, flag) => supabase.rpc('mod_set_post_removed', { pid, flag })
 export const modDeleteComment = (cid) => supabase.rpc('mod_delete_comment', { cid })
 export const modSetPro = (uname, flag) => supabase.rpc('mod_set_pro', { uname, flag })
+
+/* ---------- image shrinking before upload ---------- */
+export async function shrinkImage(file, maxW = 1400) {
+  const ext = (file.name || '').split('.').pop().toLowerCase() || 'jpg'
+  const keep = { blob: file, ext }
+  if (!file.type.startsWith('image/') || file.type === 'image/gif' || file.type === 'image/svg+xml') return keep
+  try {
+    const url = URL.createObjectURL(file)
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url })
+    const scale = Math.min(1, maxW / img.naturalWidth)
+    const w = Math.round(img.naturalWidth * scale), h = Math.round(img.naturalHeight * scale)
+    keep.w = img.naturalWidth; keep.h = img.naturalHeight
+    if ((scale === 1 && file.size < 500 * 1024) || h > 10000) { URL.revokeObjectURL(url); return keep }
+    const c = document.createElement('canvas'); c.width = w; c.height = h
+    const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h); ctx.drawImage(img, 0, 0, w, h)
+    URL.revokeObjectURL(url)
+    const blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.86))
+    if (!blob || blob.size >= file.size) return keep
+    return { blob, ext: 'jpg', w, h }
+  } catch { return keep }
+}
+
+/* ---------- editing ---------- */
+export const updatePost = (id, patch) => supabase.from('posts').update(patch).eq('id', id)
+export const updateComment = (id, body) => supabase.from('comments').update({ body }).eq('id', id)
+
+/* ---------- mutes ---------- */
+export function setMutedTag(user_id, tag, on) {
+  return on
+    ? supabase.from('muted_tags').upsert({ user_id, tag }, { onConflict: 'user_id,tag' })
+    : supabase.from('muted_tags').delete().eq('user_id', user_id).eq('tag', tag)
+}
+export function setMutedSection(user_id, section, on) {
+  return on
+    ? supabase.from('muted_sections').upsert({ user_id, section }, { onConflict: 'user_id,section' })
+    : supabase.from('muted_sections').delete().eq('user_id', user_id).eq('section', section)
+}
+
+/* ---------- account ---------- */
+export const deleteAccount = () => supabase.rpc('delete_account')
+export const modSetUser = (uname, field, flag) => supabase.rpc('mod_set_user', { uname, field, flag })

@@ -4,7 +4,10 @@ import { supabase } from './supabase'
 const Ctx = createContext(null)
 export const useApp = () => useContext(Ctx)
 
-const emptyLists = { blocked: new Set(), hidden: new Set(), users: new Set(), sections: new Set() }
+const emptyLists = { blocked: new Set(), hidden: new Set(), users: new Set(), sections: new Set(), mutedTags: new Set(), mutedSections: new Set() }
+
+const read = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d } catch { return d } }
+const inDarkHours = ({ from, to }, h = new Date().getHours()) => (from <= to ? h >= from && h < to : h >= from || h < to)
 
 export function AppProvider({ children }) {
   const [session, setSession] = useState(null)
@@ -18,6 +21,7 @@ export function AppProvider({ children }) {
   const [theme, setTheme] = useState(() => {
     try { return localStorage.getItem('18gag.theme') || 'auto' } catch { return 'auto' }
   })
+  const [schedule, setSchedule] = useState(() => read('18gag.schedule', { from: 20, to: 7 }))
   const user = session?.user || null
   const uid = user?.id || null
   const streakShown = useRef(false)
@@ -58,17 +62,21 @@ export function AppProvider({ children }) {
 
   const reloadLists = useCallback(async () => {
     if (!uid) return setLists(emptyLists)
-    const [b, h, f, s] = await Promise.all([
+    const [b, h, f, s, mt, ms] = await Promise.all([
       supabase.from('blocks').select('blocked_id').eq('user_id', uid),
       supabase.from('hidden_posts').select('post_id').eq('user_id', uid),
       supabase.from('follows').select('following_id').eq('follower_id', uid),
       supabase.from('section_follows').select('section').eq('user_id', uid),
+      supabase.from('muted_tags').select('tag').eq('user_id', uid),
+      supabase.from('muted_sections').select('section').eq('user_id', uid),
     ])
     setLists({
       blocked: new Set((b.data || []).map((r) => r.blocked_id)),
       hidden: new Set((h.data || []).map((r) => r.post_id)),
       users: new Set((f.data || []).map((r) => r.following_id)),
       sections: new Set((s.data || []).map((r) => r.section)),
+      mutedTags: new Set((mt.data || []).map((r) => r.tag)),
+      mutedSections: new Set((ms.data || []).map((r) => r.section)),
     })
   }, [uid])
 
@@ -92,16 +100,26 @@ export function AppProvider({ children }) {
 
   useEffect(() => {
     const root = document.documentElement
-    if (theme === 'auto') root.removeAttribute('data-theme')
-    else root.setAttribute('data-theme', theme)
-    try { localStorage.setItem('18gag.theme', theme) } catch { /* private mode */ }
-  }, [theme])
+    const apply = () => {
+      const t = theme === 'schedule' ? (inDarkHours(schedule) ? 'dark' : 'light') : theme
+      if (t === 'auto') root.removeAttribute('data-theme')
+      else root.setAttribute('data-theme', t)
+    }
+    apply()
+    try {
+      localStorage.setItem('18gag.theme', theme)
+      localStorage.setItem('18gag.schedule', JSON.stringify(schedule))
+    } catch { /* private mode */ }
+    if (theme !== 'schedule') return
+    const timer = setInterval(apply, 60000)
+    return () => clearInterval(timer)
+  }, [theme, schedule])
 
   const value = useMemo(() => ({
-    ready, user, uid, profile, sections, lists, unread, modal, toasts, theme,
-    setTheme, setUnread, toast, open, close, need, reloadProfile, reloadLists, reloadUnread,
+    ready, user, uid, profile, sections, lists, unread, modal, toasts, theme, schedule,
+    setTheme, setSchedule, setUnread, toast, open, close, need, reloadProfile, reloadLists, reloadUnread,
     signOut: () => supabase.auth.signOut(),
-  }), [ready, user, uid, profile, sections, lists, unread, modal, toasts, theme,
+  }), [ready, user, uid, profile, sections, lists, unread, modal, toasts, theme, schedule,
     toast, open, close, need, reloadProfile, reloadLists, reloadUnread])
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

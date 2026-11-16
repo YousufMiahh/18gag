@@ -47,13 +47,27 @@ export function Avatar({ url, name = '?', size = 32 }) {
   )
 }
 
-export function UserLink({ username, pro, className = '' }) {
-  return (
-    <Link to={`/u/${username}`} className={'userlink ' + className}>
+export function UserLink({ username, pro, verified, since, plain, className = '' }) {
+  const days = since ? Math.max(0, Math.floor((Date.now() - new Date(since).getTime()) / 864e5)) : null
+  const inner = (
+    <>
       {username}
+      {verified && <span className="tick" title="Verified">✓</span>}
       {pro && <span className="pro" title="Pro member">PRO</span>}
-    </Link>
+    </>
   )
+  return (
+    <>
+      {plain ? <span className={'userlink ' + className}>{inner}</span> : <Link to={`/u/${username}`} className={'userlink ' + className}>{inner}</Link>}
+      {days !== null && <span className="days" title={`Member for ${days} days`}>{days}d</span>}
+    </>
+  )
+}
+
+// turn @username into profile links
+export function withMentions(text) {
+  return text.split(/(@[A-Za-z0-9_]{3,20})/g).map((part, i) =>
+    /^@[A-Za-z0-9_]{3,20}$/.test(part) ? <Link key={i} className="mention" to={`/u/${part.slice(1)}`}>{part}</Link> : part)
 }
 
 export function Modal({ title, onClose, children, wide }) {

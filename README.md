@@ -9,7 +9,7 @@ Built with React (Vite) and Supabase (login, Postgres database, file storage, li
 ### 1. Supabase
 
 1. Create a new project at supabase.com.
-2. Open **SQL Editor**, paste everything from `supabase/schema.sql`, and press **Run**. This creates the tables, security rules, the `media` upload bucket and the starter sections and boards.
+2. Open **SQL Editor**, paste everything from `supabase/schema.sql`, and press **Run**. (If your database was set up before 16 Nov 2026, run `supabase/update-1.sql` instead; it adds the newer features to an existing database.) This creates the tables, security rules, the `media` upload bucket and the starter sections and boards.
 3. Open **Project Settings → API** and copy the **Project URL** and the **anon public** key.
 4. Open **Authentication → URL Configuration** and set **Site URL** to your site's address (for local work, `http://localhost:5173`). Confirmation and password-reset emails link back to it.
 
@@ -68,13 +68,20 @@ A **Moderation** link then appears in your account menu.
 | Awards | Five awards anyone can give to a post |
 | Boards | Live chat rooms by topic |
 | Safety | Sensitive-content blur, report posts and comments, admin review queue, remove content |
-| Extras | Pro badge (set by an admin), light and dark themes, phone and desktop layouts |
+| Privacy | Anonymous posts, private upvotes, mute sections and tags, delete your account |
+| Editing | Edit your posts and comments, change username, @mentions in comments |
+| Trust | Verified ticks and bans (set by an admin), account age beside names, rate limits on posts, comments and chat |
+| Extras | Pro badge (set by an admin), light, dark and timed themes, link preview cards for shared posts, images shrunk before upload, rules and privacy pages |
 
 ## If something goes wrong
 
 - **"permission denied" errors in the browser console**: run `supabase/permissions.sql` in the SQL editor.
 - **A "Connect your Supabase project" screen**: the two environment variables are missing or misspelled. Fix them in Netlify and redeploy.
 - **Sign-up says to check email but nothing arrives**: Supabase's built-in email sender is rate-limited. Turn off "Confirm email" or connect your own email provider.
+
+## Google login (optional)
+
+In Supabase open **Authentication → Providers → Google**, turn it on and add the client ID and secret from Google Cloud. Then add `VITE_GOOGLE_LOGIN=true` to the Netlify environment variables and redeploy. A "Continue with Google" button appears in the login box. People who sign in this way get a placeholder username they can change in Settings.
 
 ## Changing things
 
@@ -88,4 +95,5 @@ A **Moderation** link then appears in your account menu.
 - Payments. The Pro badge is switched on by an admin; there is no checkout.
 - Adverts, native phone apps and push notifications.
 - Automatic content filtering. Moderation is reports plus a human admin.
-- Account deletion from the site. Delete a user in Supabase under Authentication → Users and their content goes with them.
+- A GIF search picker in comments (it needs a key from a GIF provider). You can attach a GIF file to a comment instead.
+- Video compression. Videos upload as they are, up to 50 MB.

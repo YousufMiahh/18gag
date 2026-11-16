@@ -89,7 +89,8 @@ export function PostCard({ post, full, onGone }) {
   const [menu, setMenu] = useState(false)
   const [bump, setBump] = useState(0)
   const menuRef = useRef(null)
-  const mine = uid === post.author_id
+  const mine = !!uid && (post.is_mine === true || uid === post.author_id)
+  const masked = !post.author_id
   const sectionName = sections.find((s) => s.slug === post.section)?.name || post.section
 
   useEffect(() => {
@@ -125,6 +126,9 @@ export function PostCard({ post, full, onGone }) {
   const doBlock = () => need(async () => {
     await api.setBlock(uid, post.author_id, true); await reloadLists(); toast(`Blocked ${post.username}`); onGone?.(post.id)
   })
+  const doMute = () => need(async () => {
+    await api.setMutedSection(uid, post.section, true); await reloadLists(); toast(`${sectionName} muted. Undo it in Settings.`)
+  })
   const doDelete = async () => {
     const { error } = await api.deletePost(post.id)
     if (error) return toast('Could not delete. Try again.')
@@ -140,8 +144,9 @@ export function PostCard({ post, full, onGone }) {
     <article className="post" data-post>
       <header className="post-head">
         <div className="post-meta">
-          <Link to={`/u/${post.username}`}><Avatar url={post.avatar_url} name={post.username} size={28} /></Link>
-          <UserLink username={post.username} pro={post.is_pro} />
+          {masked ? <Avatar name="?" size={28} /> : <Link to={`/u/${post.username}`}><Avatar url={post.avatar_url} name={post.username} size={28} /></Link>}
+          <UserLink username={post.username} pro={post.is_pro} verified={post.is_verified} since={post.author_since} plain={masked} />
+          {post.is_anonymous && mine && <span className="anon-chip" title="Other people see this post as anonymous">anonymous to others</span>}
           <span className="dot">·</span>
           <Link className="tag" to={`/s/${post.section}`}>{sectionName}</Link>
           <span className="dot">·</span>
@@ -155,7 +160,9 @@ export function PostCard({ post, full, onGone }) {
               <div className="menu" onClick={() => setMenu(false)}>
                 {!mine && <button onClick={doHide}>Hide this post</button>}
                 {!mine && <button onClick={() => need(() => open('report', { post_id: post.id }))}>Report</button>}
-                {!mine && !lists.blocked.has(post.author_id) && <button onClick={doBlock}>Block {post.username}</button>}
+                {!mine && !masked && !lists.blocked.has(post.author_id) && <button onClick={doBlock}>Block {post.username}</button>}
+                {!mine && !lists.mutedSections.has(post.section) && <button onClick={doMute}>Mute {sectionName}</button>}
+                {mine && <button onClick={() => open('editpost', { post, onSaved: (p) => { Object.assign(post, p); setBump((b) => b + 1) } })}>Edit post</button>}
                 {mine && <button className="danger" onClick={doDelete}>Delete post</button>}
                 {profile?.is_admin && !mine && <button className="danger" onClick={doModRemove}>Remove (admin)</button>}
               </div>
@@ -251,7 +258,9 @@ export function Feed({ params, emptyTitle = 'Nothing here yet', emptyText }) {
   }, [state, page, load])
 
   const gone = (id) => setPosts((cur) => cur.filter((p) => p.id !== id))
-  const shown = posts.filter((p) => !lists.hidden.has(p.id) && !lists.blocked.has(p.author_id))
+  const general = !params.section && !params.tag && !params.author && !params.q
+  const shown = posts.filter((p) => !lists.hidden.has(p.id) && !lists.blocked.has(p.author_id) &&
+    !(general && (lists.mutedSections.has(p.section) || p.tags.some((t) => lists.mutedTags.has(t)))))
 
   return (
     <div className="feed">

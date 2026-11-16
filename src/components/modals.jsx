@@ -15,6 +15,11 @@ function AuthModal() {
   const [busy, setBusy] = useState(false)
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
 
+  const google = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin } })
+    if (error) setErr(error.message)
+  }
+
   const submit = async (e) => {
     e.preventDefault()
     setErr(''); setNote(''); setBusy(true)
@@ -63,6 +68,9 @@ function AuthModal() {
         {err && <p className="form-err" role="alert">{err}</p>}
         {note && <p className="form-note" role="status">{note}</p>}
         <button className="btn" disabled={busy}>{busy ? 'One moment…' : mode === 'login' ? 'Log in' : mode === 'signup' ? 'Sign up' : 'Send reset link'}</button>
+        {import.meta.env.VITE_GOOGLE_LOGIN === 'true' && mode !== 'reset' && (
+          <button type="button" className="btn outline" onClick={google}>Continue with Google</button>
+        )}
         <div className="form-links">
           {mode !== 'login' && <button type="button" className="link" onClick={() => setMode('login')}>I have an account</button>}
           {mode !== 'signup' && <button type="button" className="link" onClick={() => setMode('signup')}>Create an account</button>}
@@ -153,6 +161,7 @@ function UploadModal() {
   const [section, setSection] = useState('funny')
   const [tags, setTags] = useState('')
   const [nsfw, setNsfw] = useState(false)
+  const [anon, setAnon] = useState(false)
   const [file, setFile] = useState(null)
   const [preview, setPreview] = useState(null)
   const [body, setBody] = useState('')
@@ -193,21 +202,29 @@ function UploadModal() {
     setErr('')
     if (!title.trim()) return setErr('Add a title.')
     const tagList = [...new Set(tags.toLowerCase().split(/[,\s#]+/).map((t) => t.replace(/[^a-z0-9_-]/g, '')).filter(Boolean))].slice(0, 5)
-    const post = { title: title.trim(), section, tags: tagList, nsfw }
+    const post = { title: title.trim(), section, tags: tagList, nsfw, is_anonymous: anon }
+    const folder = anon ? 'anon' : uid
     let pollOptions
     setBusy(true)
     try {
       if (kind === 'media') {
         if (!file) throw new Error('Choose an image, GIF or video.')
-        const d = await dims(file)
-        post.kind = file.type.startsWith('video/') ? 'video' : 'image'
-        post.media_url = await api.uploadMedia(uid, file, file.name.split('.').pop().toLowerCase())
-        post.media_w = d.w || null; post.media_h = d.h || null
+        if (file.type.startsWith('video/')) {
+          const d = await dims(file)
+          post.kind = 'video'
+          post.media_url = await api.uploadMedia(uid, file, file.name.split('.').pop().toLowerCase(), folder)
+          post.media_w = d.w || null; post.media_h = d.h || null
+        } else {
+          const small = await api.shrinkImage(file)
+          post.kind = 'image'
+          post.media_url = await api.uploadMedia(uid, small.blob, small.ext, folder)
+          post.media_w = small.w || null; post.media_h = small.h || null
+        }
       } else if (kind === 'meme') {
         if (!file || !canvas.current) throw new Error('Choose an image for your meme.')
         const blob = await new Promise((r) => canvas.current.toBlob(r, 'image/jpeg', 0.9))
         post.kind = 'image'
-        post.media_url = await api.uploadMedia(uid, blob, 'jpg')
+        post.media_url = await api.uploadMedia(uid, blob, 'jpg', folder)
         post.media_w = canvas.current.width; post.media_h = canvas.current.height
       } else if (kind === 'text') {
         if (!body.trim()) throw new Error('Write something first.')
@@ -288,8 +305,47 @@ function UploadModal() {
           <input id="up-nsfw" type="checkbox" checked={nsfw} onChange={(e) => setNsfw(e.target.checked)} />
           Sensitive content (blurred until tapped)
         </label>
+        <label htmlFor="up-anon" className="check">
+          <input id="up-anon" type="checkbox" checked={anon} onChange={(e) => setAnon(e.target.checked)} />
+          Post anonymously (your name is hidden from everyone except admins)
+        </label>
         {err && <p className="form-err" role="alert">{err}</p>}
         <button className="btn" disabled={busy}>{busy ? 'Uploading…' : 'Post'}</button>
+      </form>
+    </Modal>
+  )
+}
+
+/* ---------- edit a post ---------- */
+function EditPostModal({ post, onSaved }) {
+  const { close, toast, sections } = useApp()
+  const [title, setTitle] = useState(post.title)
+  const [section, setSection] = useState(post.section)
+  const [tags, setTags] = useState(post.tags.join(', '))
+  const [nsfw, setNsfw] = useState(post.nsfw)
+  const [err, setErr] = useState('')
+  const submit = async (e) => {
+    e.preventDefault()
+    if (!title.trim()) return setErr('Add a title.')
+    const tagList = [...new Set(tags.toLowerCase().split(/[,\s#]+/).map((t) => t.replace(/[^a-z0-9_-]/g, '')).filter(Boolean))].slice(0, 5)
+    const patch = { title: title.trim(), section, tags: tagList, nsfw }
+    const { error } = await api.updatePost(post.id, patch)
+    if (error) return setErr('Could not save. Try again.')
+    onSaved?.(patch); toast('Post updated'); close()
+  }
+  return (
+    <Modal title="Edit post" onClose={close}>
+      <form className="form" onSubmit={submit}>
+        <label htmlFor="ed-title">Title<input id="ed-title" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} /></label>
+        <label htmlFor="ed-section">Section
+          <select id="ed-section" value={section} onChange={(e) => setSection(e.target.value)}>
+            {sections.map((s) => <option key={s.slug} value={s.slug}>{s.name}</option>)}
+          </select>
+        </label>
+        <label htmlFor="ed-tags">Tags (up to 5)<input id="ed-tags" value={tags} onChange={(e) => setTags(e.target.value)} /></label>
+        <label htmlFor="ed-nsfw" className="check"><input id="ed-nsfw" type="checkbox" checked={nsfw} onChange={(e) => setNsfw(e.target.checked)} />Sensitive content</label>
+        {err && <p className="form-err" role="alert">{err}</p>}
+        <button className="btn">Save changes</button>
       </form>
     </Modal>
   )
@@ -359,7 +415,7 @@ function ReportModal(props) {
 export function Modals() {
   const { modal } = useApp()
   if (!modal) return null
-  const M = { auth: AuthModal, newpass: NewPassModal, upload: UploadModal, award: AwardModal, report: ReportModal }[modal.type]
+  const M = { auth: AuthModal, newpass: NewPassModal, upload: UploadModal, editpost: EditPostModal, award: AwardModal, report: ReportModal }[modal.type]
   return M ? <M {...modal.props} /> : null
 }
 

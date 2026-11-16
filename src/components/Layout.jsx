@@ -107,7 +107,7 @@ export function Sidebar({ openMobile, onClose }) {
         <button className="side-link side-theme" onClick={() => setTheme(theme === 'dark' || (theme === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches) ? 'light' : 'dark')}>
           <Icon name="sun" /><span>Switch light / dark</span>
         </button>
-        <p className="side-foot">18gag · a personal project<br />Press J and K to move between posts.</p>
+        <p className="side-foot"><Link to="/rules">Rules</Link> · <Link to="/privacy">Privacy</Link><br />Press J and K to move between posts.</p>
       </nav>
     </>
   )
