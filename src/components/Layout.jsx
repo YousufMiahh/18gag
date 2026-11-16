@@ -74,6 +74,10 @@ export function Sidebar({ openMobile, onClose }) {
   const { sections, lists, uid, need, reloadLists, toast, theme, setTheme } = useApp()
   const loc = useLocation()
   useEffect(() => onClose(), [loc]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    document.body.classList.toggle('no-scroll', openMobile)
+    return () => document.body.classList.remove('no-scroll')
+  }, [openMobile])
 
   const toggle = (slug) => need(async () => {
     const on = !lists.sections.has(slug)

@@ -79,10 +79,10 @@ p { margin: 0; overflow-wrap: anywhere; }
 .main { min-width: 0; }
 .side { position: sticky; top: 76px; align-self: start; max-height: calc(100vh - 90px); overflow-y: auto; display: flex; flex-direction: column; gap: 2px; padding-right: 4px; scrollbar-width: thin; }
 .side h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 16px 0 4px 10px; font-weight: 700; }
-.side-link { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; font-weight: 600; flex: 1; transition: background .15s, transform .15s; }
+.side-link { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; font-weight: 600; flex: 1 0 auto; transition: background .15s, transform .15s; }
 .side-link:hover { background: var(--surface); transform: translateX(2px); }
 .side-link.active { background: var(--ink); color: var(--bg); }
-.side-row { display: flex; align-items: center; gap: 2px; }
+.side-row { display: flex; align-items: center; gap: 2px; flex: none; }
 .star { border: 0; background: none; color: var(--muted); width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; opacity: .55; transition: opacity .15s, color .15s, transform .2s var(--ease); }
 .star:hover { opacity: 1; }
 .star.on { color: #e0a800; opacity: 1; transform: scale(1.15); }
@@ -291,7 +291,8 @@ a.list-item:hover { border-color: var(--ink); transform: translateX(3px); }
 @media (max-width: 860px) {
   .only-mobile { display: grid; }
   .wrap { grid-template-columns: minmax(0, 620px); padding: 14px 16px 60px; }
-  .side { position: fixed; top: 0; left: 0; bottom: 0; z-index: 45; width: 264px; max-height: none; background: var(--surface); border-right: 2px solid var(--ink); padding: 18px 12px;
+  .side { position: fixed; top: 0; left: 0; bottom: 0; z-index: 45; width: 264px; max-height: none; height: 100vh; height: 100dvh; align-self: auto;
+    overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding-bottom: calc(24px + env(safe-area-inset-bottom)); background: var(--surface); border-right: 2px solid var(--ink); padding: 18px 12px;
     transform: translateX(-105%); transition: transform .32s var(--ease); }
   .side.open { transform: none; }
   .scrim { display: block; position: fixed; inset: 0; z-index: 40; background: rgba(10, 10, 25, .55); animation: fade .25s ease; }
